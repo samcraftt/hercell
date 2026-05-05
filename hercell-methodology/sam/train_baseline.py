@@ -13,8 +13,8 @@ EPOCHS      = 20
 LR          = 1e-4
 NUM_CLASSES = 4
 
-WSI_TRAIN = "WSI-based-dataset/train_data_wsi"
-WSI_TEST = "WSI-based-dataset/test_data_wsi"
+WSI_TRAIN = "../datasets/WSI-based-dataset/train_data_wsi"
+WSI_TEST = "../datasets/WSI-based-dataset/test_data_wsi"
 MODEL_OUT = "models/baseline.pt"
 Path("models").mkdir(exist_ok=True)
 
