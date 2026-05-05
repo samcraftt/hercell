@@ -1,0 +1,39 @@
+---
+description: Returning any kind of response from a backend API route and/or displaying an API response in the frontend
+alwaysApply: false
+---
+# Backend API responses
+
+Always follow this format when returning responses from the backend API:
+
+1. Use `res.end()` for empty success, don't attach success messages.
+2. Use `res.json()` to return data on success. For example:
+
+```
+const getUserByEmail = async (req, res) => {
+    const user = await User.findByEmail(req.body.email);
+    res.json({ user });
+};
+```
+
+3. Use `res.status(400).json({ error: 'This is a relevant error message.' })` for client errors.
+4. Use `res.status(500).json({ error: 'This is a relevant error message.' })` for server errors.
+
+Therefore, the only status codes we should ever send are `400` and `500`.
+
+# Displaying errors
+
+Upon error, the backend API's response should always include an error message. With our consistent response format, this message should always be retrievable by the same approach in a try/catch sequence. Display these errors in the frontend using `toast.error(message)`. For example:
+
+```
+const handleOnClick = async (e) => {
+    e.preventDefault();
+    try {
+        await api.doSomething(formData);
+        toast.success('Successfully did something!');
+    } catch (error) {
+        const message = error.response?.data?.error || 'Failed to do something, please try again.';
+        toast.error(message);
+    }
+};
+```

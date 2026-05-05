@@ -1,0 +1,49 @@
+---
+alwaysApply: true
+---
+# Codebase-wide rules
+
+## Technologies used
+
+- `React.js` frontend with `Tailwind CSS` for styling
+- `Express.js` backend
+- `PostgreSQL` database
+- `Redis` for session management (and caching when appropriate)
+- Session cookie for authentication, not JWT
+
+## Structure
+
+### Backend (`/backend`)
+
+- `config/` - Configure database, redis, etc.
+- `controllers/`
+- `middleware/` - Express middleware
+- `models/` - One model file with SQL operations for each database table
+- `routes/`
+- `utils/`
+- `server.js` - Server entry point
+
+### Frontend (`/frontend`)
+
+- `src/components/` - Reusable UI components
+- `src/pages/` - Full page components
+- `src/utils/`
+- `src/api.js` - Requests to the backend API
+- `src/index.js` and `src/App.js` - Frontend entry points
+
+## Code style
+
+### Casing
+
+- `camelCase` for JavaScript variables, functions, props, keys, etc.
+- `PascalCase` for components and classes
+- `snake_case` for database columns
+
+### Naming
+
+- Refer to variables that represent the same data by the same name across the stack as much as possible
+- Names should be as concise as possible while still being adequately descriptive
+
+### Ordering
+
+- Order alphabetically when order is negligible (e.g., imports, object keys, component props, function arguments, etc.)

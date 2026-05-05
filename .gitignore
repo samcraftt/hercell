@@ -1,0 +1,11 @@
+.env
+node_modules
+venv
+__pycache__
+.DS_Store
+images
+models
+Patch-based-dataset
+WSI-based-dataset
+*.pt
+*.zip

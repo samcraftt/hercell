@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PG_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  hashedPassword String?  @map("hashed_password")
+  verified      Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  @@map("users")
+}
+
+model Token {
+  id          Int      @id @default(autoincrement())
+  hashedToken String   @map("hashed_token")
+  userId      Int      @unique @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("tokens")
+}
