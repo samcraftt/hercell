@@ -12,8 +12,8 @@ NUM_CLASSES = 4
 WSI_TEST    = "WSI-based-dataset/test_data_wsi"
 BATCH_SIZE  = 64
 MODEL_PATH  = "models/baseline.pt"
-OUT_FILE    = "images/eval_baseline.png"
-Path("images").mkdir(exist_ok=True)
+OUT_FILE    = "debug/eval_baseline.png"
+Path("debug").mkdir(exist_ok=True)
 
 test_tf = transforms.Compose([
     transforms.Resize((IMG_SIZE, IMG_SIZE)),

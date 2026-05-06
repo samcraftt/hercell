@@ -100,7 +100,7 @@ const Home = () => {
                   : 'Decision support for pathologists who need a second look at borderline HER2 expression.'}
               </p>
             </div>
-            {user ? (
+            {/*user ? (
               <Button
                 onClick={logout}
                 variant="secondary"
@@ -116,11 +116,11 @@ const Home = () => {
                   Log in
                 </Button>
               </div>
-            )}
+            )*/}
           </div>
         </div>
 
-        {!user ? (
+        {!true ? (
           <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 shadow-xl">
             <div
               aria-hidden

@@ -11,8 +11,8 @@ from generate_specks import generate_speck_sample
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 EVAL_SAMPLES = 1000
 MODEL_PATH = "models/specks.pt"
-OUT_FILE = "images/eval_specks.png"
-Path("images").mkdir(parents=True, exist_ok=True)
+OUT_FILE = "debug/eval_specks.png"
+Path("debug").mkdir(parents=True, exist_ok=True)
 
 CLS_0 = 0
 CLS_1 = 1

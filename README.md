@@ -14,6 +14,8 @@ npm i
 npm start
 ```
 
+Upload images found in `hercell/hercell-app/images` to test functionality.
+
 # Explore the methodology
 
 1. `cd` into the `hercell-methodology` directory
