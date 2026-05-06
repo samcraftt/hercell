@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision import datasets, transforms, models
 import numpy as np
 from pathlib import Path
@@ -13,8 +13,7 @@ EPOCHS      = 20
 LR          = 1e-4
 NUM_CLASSES = 4
 
-WSI_TRAIN = "../datasets/WSI-based-dataset/train_data_wsi"
-WSI_TEST = "../datasets/WSI-based-dataset/test_data_wsi"
+WSI_DATA_ROOT = "../datasets/WSI-based-dataset"
 MODEL_OUT = "models/baseline.pt"
 Path("models").mkdir(exist_ok=True)
 
@@ -35,17 +34,37 @@ test_tf = transforms.Compose([
 
 
 # ── Reused: data loading with weighted sampling for class imbalance ───────────
-def build_loaders(train_dir, test_dir):
-    train_ds = datasets.ImageFolder(train_dir, transform=train_tf)
-    test_ds  = datasets.ImageFolder(test_dir,  transform=test_tf)
+def build_loaders(data_root):
+    train_ds = datasets.ImageFolder(data_root, transform=train_tf)
+    test_ds  = datasets.ImageFolder(data_root, transform=test_tf)
 
-    targets      = [s[1] for s in train_ds.samples]
-    class_counts = np.bincount(targets)
+    train_indices = [
+        idx for idx, (path, _) in enumerate(train_ds.samples)
+        if "train" in Path(path).name.lower()
+    ]
+    test_indices = [
+        idx for idx, (path, _) in enumerate(test_ds.samples)
+        if "test" in Path(path).name.lower()
+    ]
+    if not train_indices or not test_indices:
+        raise RuntimeError(
+            "Could not split data by filename. Ensure files contain 'train' or 'test' in their names."
+        )
+
+    train_targets = [train_ds.samples[idx][1] for idx in train_indices]
+    class_counts = np.bincount(train_targets)
+    if np.any(class_counts == 0):
+        raise RuntimeError("At least one class has zero train samples after filename split.")
+
+    train_subset = Subset(train_ds, train_indices)
+    test_subset = Subset(test_ds, test_indices)
+
+    targets      = np.array(train_targets)
     weights      = 1.0 / class_counts[targets]
     sampler      = WeightedRandomSampler(weights, len(weights))
 
-    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, sampler=sampler, num_workers=0)
-    test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False,   num_workers=0)
+    train_loader = DataLoader(train_subset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=0)
+    test_loader  = DataLoader(test_subset,  batch_size=BATCH_SIZE, shuffle=False,   num_workers=0)
     return train_loader, test_loader
 
 
@@ -97,6 +116,6 @@ def build_model():
     return model.to(DEVICE)
 
 
-wsi_train_loader, wsi_test_loader = build_loaders(WSI_TRAIN, WSI_TEST)
+wsi_train_loader, wsi_test_loader = build_loaders(WSI_DATA_ROOT)
 wsi_model = build_model()
 train(wsi_model, wsi_train_loader, wsi_test_loader, MODEL_OUT)

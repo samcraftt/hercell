@@ -9,7 +9,7 @@ from pathlib import Path
 DEVICE      = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE    = 224
 NUM_CLASSES = 4
-WSI_TEST    = "WSI-based-dataset/test_data_wsi"
+WSI_DATA_ROOT = "../datasets/WSI-based-dataset"
 BATCH_SIZE  = 64
 MODEL_PATH  = "models/baseline.pt"
 OUT_FILE    = "debug/eval_baseline.png"
@@ -45,19 +45,24 @@ def run_inference(model, dataset, indices):
 
 def main():
     # Evaluate only held-out WSI samples (not seen during training).
-    dataset     = datasets.ImageFolder(WSI_TEST, transform=test_tf)
+    dataset     = datasets.ImageFolder(WSI_DATA_ROOT, transform=test_tf)
     class_names = dataset.classes  # ['class_0', 'class_1+', 'class_2+', 'class_3+']
 
     cls0_idx = class_names.index("class_0")
     cls1_idx = class_names.index("class_1+")
 
-    # Collect all class_0 and class_1+ sample indices
+    # Collect held-out test samples from class_0 and class_1+ by filename split.
     indices     = []
     true_labels = []
-    for idx, (_, label) in enumerate(dataset.samples):
-        if label in (cls0_idx, cls1_idx):
+    for idx, (path, label) in enumerate(dataset.samples):
+        name = Path(path).name.lower()
+        if "test" in name and label in (cls0_idx, cls1_idx):
             indices.append(idx)
             true_labels.append(label)
+    if not indices:
+        raise RuntimeError(
+            "No test samples found for class_0/class_1+. Ensure filenames contain 'test'."
+        )
 
     print(f"Running inference on {len(indices)} samples "
           f"({true_labels.count(cls0_idx)} class_0, "
@@ -66,17 +71,34 @@ def main():
     model = build_model()
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 
-    all_probs, pred_labels = run_inference(model, dataset, indices)
+    all_probs, all_preds = run_inference(model, dataset, indices)
+    prob_cls0 = all_probs[:, cls0_idx].numpy()
     prob_cls1 = all_probs[:, cls1_idx].numpy()
 
-    correct = np.array([p == t for p, t in zip(pred_labels, true_labels)])
+    # Restrict prediction to {class_0, class_1+} by renormalizing those two
+    # probabilities: P(class_1+ | {class_0, class_1+}) = p1 / (p0 + p1).
+    denom = prob_cls0 + prob_cls1
+    prob_cls1_given_01 = np.divide(
+        prob_cls1,
+        denom,
+        out=np.full_like(prob_cls1, 0.5),
+        where=denom > 0,
+    )
     true_arr = np.array(true_labels)
+    pred_arr = np.array(all_preds)
 
-    # Sort everything by P(class_1+) ascending
-    order    = np.argsort(prob_cls1)
-    prob_cls1_sorted = prob_cls1[order]
-    true_sorted      = true_arr[order]
-    correct_sorted   = correct[order]
+    # Keep only samples baseline model predicts as class_0 (4-class argmax).
+    keep_mask = pred_arr == cls0_idx
+    if not keep_mask.any():
+        raise RuntimeError("No samples were predicted as class_0 by the baseline model.")
+
+    prob_kept = prob_cls1_given_01[keep_mask]
+    true_kept = true_arr[keep_mask]
+
+    # Sort kept samples by P(class_1+ | {class_0, class_1+}) ascending.
+    order    = np.argsort(prob_kept)
+    prob_cls1_sorted = prob_kept[order]
+    true_sorted      = true_kept[order]
 
     x = np.arange(len(order))
 
@@ -85,35 +107,30 @@ def main():
 
     # Main probability line
     ax.plot(x, prob_cls1_sorted, color="#2a6496", linewidth=2.4,
-            zorder=3, label="P(class_1+)")
-
-    # Horizontal decision-boundary line
-    ax.axhline(y=0.5, color="#888888", linestyle="--", linewidth=1.5,
-               zorder=4, label="Decision boundary (P = 0.5)")
+            zorder=3, label="P(class_1+ | {class_0, class_1+})")
 
     ax.legend(loc="upper left", fontsize=12, framealpha=0.85)
 
-    # Accuracy summary in text box
-    n_correct = correct_sorted.sum()
-    acc = n_correct / len(correct_sorted)
+    # Summary in text box for baseline-predicted class_0 samples.
+    n_total = len(true_sorted)
     cls0_mask = true_sorted == cls0_idx
     cls1_mask = true_sorted == cls1_idx
-    acc0 = correct_sorted[cls0_mask].mean()
-    acc1 = correct_sorted[cls1_mask].mean()
+    precision_cls0 = cls0_mask.mean()
+    miss_rate_cls1 = cls1_mask.mean()
     summary = (
-        f"class_0 acc:  {acc0:.1%}  (n={cls0_mask.sum()})\n"
-        f"class_1+ acc: {acc1:.1%}  (n={cls1_mask.sum()})\n"
-        f"Overall acc:  {acc:.1%}  (n={len(correct_sorted)})"
+        f"Predicted class_0 samples: {n_total}\n"
+        f"True class_0 among them:   {precision_cls0:.1%}  (n={cls0_mask.sum()})\n"
+        f"True class_1+ among them:  {miss_rate_cls1:.1%}  (n={cls1_mask.sum()})"
     )
     ax.text(0.99, 0.97, summary, transform=ax.transAxes,
             fontsize=11, verticalalignment="top", horizontalalignment="right",
             bbox=dict(boxstyle="round,pad=0.4", facecolor="white", alpha=0.85))
 
-    ax.set_xlabel("Samples — sorted by P(class_1+) ascending", fontsize=14)
-    ax.set_ylabel("P(class_1+)", fontsize=14)
-    ax.set_title("WSI Model · class_0 vs class_1+ · Prediction Confidence", fontsize=17)
+    ax.set_xlabel("Baseline-predicted class_0 samples — sorted by P(class_1+ | {class_0, class_1+})", fontsize=14)
+    ax.set_ylabel("P(class_1+ | {class_0, class_1+})", fontsize=14)
+    ax.set_title("Baseline-Predicted class_0 Samples · 0 vs 1+ Conditional Score", fontsize=17)
     ax.set_xlim(-0.5, len(x) - 0.5)
-    ax.set_ylim(0, 1)
+    ax.set_ylim(0, 0.5)
     ax.set_xticks([])
     ax.tick_params(axis="y", labelsize=12)
 
