@@ -57,3 +57,7 @@ python eval_specks.py
 ## Jack C's code...
 
 ## Jack H's code...
+
+# Contributions
+
+Sam's responsible for code in `hercell-methodology/sam`, Jack C in `hercell-methodology/jackc`, Jack H in `hercell-methodology/jackh`.
