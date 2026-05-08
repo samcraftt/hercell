@@ -73,7 +73,6 @@ def train(model, train_loader, test_loader, save_path):
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
     criterion = nn.CrossEntropyLoss()
-    best_acc  = 0.0
 
     for epoch in range(EPOCHS):
         model.train()
@@ -102,11 +101,10 @@ def train(model, train_loader, test_loader, save_path):
         val_acc   = val_correct / val_total
         print(f"  Epoch {epoch+1:02d}/{EPOCHS} | loss: {total_loss/total:.4f} | train acc: {train_acc:.4f} | val acc: {val_acc:.4f}")
 
-        if epoch > EPOCHS // 4 and val_acc > best_acc:
-            best_acc = val_acc
+        if epoch == EPOCHS - 1:
             torch.save(model.state_dict(), save_path)
 
-    print(f"  Best val acc: {best_acc:.4f}  →  saved to {save_path}\n")
+    print(f"  Saved to {save_path}\n")
 
 
 # ── Reused: ResNet50 backbone with 4-class head ───────────────────────────────

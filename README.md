@@ -37,7 +37,7 @@ cd sam
 
 ```bash
 python train_baseline.py    # ~10 hours
-python eval_baseline.py     # ~10 minutes
+python eval_baseline.py     # ~20 minutes
 ```
 
 ### Toy example: cell segmentation and counting
