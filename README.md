@@ -57,7 +57,7 @@ python eval_specks.py
 ## Cell granularity (Jack)
 
 ```bash
-python run_hovernet.py      # ~15 minutes
+python run_hovernet.py
 ```
 
 ## Jack H's code...
