@@ -56,6 +56,8 @@ python eval_specks.py
 
 ## Cell granularity (Jack)
 
+### Nucleus classification
+
 ```bash
 python run_hovernet.py
 ```
