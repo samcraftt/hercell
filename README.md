@@ -54,7 +54,7 @@ python train_specks.py      # ~20 minutes
 python eval_specks.py
 ```
 
-## Cell granularity (Jack)
+## Cell granularity (Jack C)
 
 ### Nucleus classification
 
