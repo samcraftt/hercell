@@ -54,7 +54,11 @@ python train_specks.py      # ~20 minutes
 python eval_specks.py
 ```
 
-## Jack C's code...
+## Cell granularity (Jack)
+
+```bash
+python run_hovernet.py      # ~15 minutes
+```
 
 ## Jack H's code...
 
