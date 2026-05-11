@@ -54,6 +54,7 @@ def main():
 
     true_labels = []
     pred_labels = []
+    prob_cls0_list = []
     prob_cls1_list = []
 
     with torch.no_grad():
@@ -66,23 +67,40 @@ def main():
             x = image_to_tensor(image).unsqueeze(0).to(DEVICE)
             _, pred_logits = model(x)
             probs = torch.softmax(pred_logits[0], dim=0).cpu().numpy()
-            prob_cls1 = float(probs[CLS_1])
-            pred_bin = CLS_1 if prob_cls1 >= 0.5 else CLS_0
+            pred_4class = int(np.argmax(probs))
 
             true_labels.append(true_class)
-            pred_labels.append(pred_bin)
-            prob_cls1_list.append(prob_cls1)
+            pred_labels.append(pred_4class)
+            prob_cls0_list.append(float(probs[CLS_0]))
+            prob_cls1_list.append(float(probs[CLS_1]))
             collected += 1
 
-    prob_cls1_arr = np.array(prob_cls1_list)
+    prob_cls0 = np.array(prob_cls0_list)
+    prob_cls1 = np.array(prob_cls1_list)
     true_arr = np.array(true_labels)
     pred_arr = np.array(pred_labels)
-    correct = pred_arr == true_arr
 
-    order = np.argsort(prob_cls1_arr)
-    prob_sorted = prob_cls1_arr[order]
-    true_sorted = true_arr[order]
-    correct_sorted = correct[order]
+    # Restrict prediction to {class 0, class 1} by renormalizing those two
+    # probabilities: P(class 1 | {class 0, class 1}) = p1 / (p0 + p1).
+    denom = prob_cls0 + prob_cls1
+    prob_cls1_given_01 = np.divide(
+        prob_cls1,
+        denom,
+        out=np.full_like(prob_cls1, 0.5),
+        where=denom > 0,
+    )
+
+    # Keep only samples the model predicts as class 0 (4-class argmax).
+    keep_mask = pred_arr == CLS_0
+    if not keep_mask.any():
+        raise RuntimeError("No samples were predicted as class 0 by the specks model.")
+
+    prob_kept = prob_cls1_given_01[keep_mask]
+    true_kept = true_arr[keep_mask]
+
+    order = np.argsort(prob_kept)
+    prob_cls1_sorted = prob_kept[order]
+    true_sorted = true_kept[order]
 
     x_axis = np.arange(len(order))
 
@@ -90,32 +108,24 @@ def main():
 
     ax.plot(
         x_axis,
-        prob_sorted,
+        prob_cls1_sorted,
         color="#2a6496",
         linewidth=2.4,
         zorder=3,
-        label="P(class 1)",
-    )
-    ax.axhline(
-        y=0.5,
-        color="#888888",
-        linestyle=":",
-        linewidth=1.5,
-        zorder=4,
-        label="Decision boundary (P = 0.5)",
+        label="P(class 1 | {class 0, class 1})",
     )
 
     ax.legend(loc="upper left", fontsize=12, framealpha=0.85)
 
+    n_total = len(true_sorted)
     cls0_mask = true_sorted == CLS_0
     cls1_mask = true_sorted == CLS_1
-    acc0 = float(correct_sorted[cls0_mask].mean()) if cls0_mask.any() else 0.0
-    acc1 = float(correct_sorted[cls1_mask].mean()) if cls1_mask.any() else 0.0
-    acc = float(correct_sorted.mean())
+    precision_cls0 = cls0_mask.mean()
+    miss_rate_cls1 = cls1_mask.mean()
     summary = (
-        f"class 0 acc:  {acc0:.1%}  (n={int(cls0_mask.sum())})\n"
-        f"class 1 acc:  {acc1:.1%}  (n={int(cls1_mask.sum())})\n"
-        f"Overall acc:  {acc:.1%}  (n={len(correct_sorted)})"
+        f"Predicted class 0 samples: {n_total}\n"
+        f"True class 0 among them:   {precision_cls0:.1%}  (n={int(cls0_mask.sum())})\n"
+        f"True class 1 among them:   {miss_rate_cls1:.1%}  (n={int(cls1_mask.sum())})"
     )
     ax.text(
         0.99,
@@ -128,11 +138,17 @@ def main():
         bbox=dict(boxstyle="round,pad=0.4", facecolor="white", alpha=0.85),
     )
 
-    ax.set_xlabel("Samples — sorted by P(class 1) ascending", fontsize=14)
-    ax.set_ylabel("P(class 1)", fontsize=14)
-    ax.set_title("Toy example · class 0 vs class 1 · prediction confidence", fontsize=17)
+    ax.set_xlabel(
+        "Specks-predicted class 0 samples — sorted by P(class 1 | {class 0, class 1})",
+        fontsize=14,
+    )
+    ax.set_ylabel("P(class 1 | {class 0, class 1})", fontsize=14)
+    ax.set_title(
+        "Specks-Predicted class 0 Samples · 0 vs 1 Conditional Score",
+        fontsize=17,
+    )
     ax.set_xlim(-0.5, len(x_axis) - 0.5)
-    ax.set_ylim(0, 1)
+    ax.set_ylim(0, 0.5)
     ax.set_xticks([])
     ax.tick_params(axis="y", labelsize=12)
 
@@ -141,8 +157,11 @@ def main():
     print(f"Plot saved to {OUT_FILE}")
     plt.close(fig)
 
-    print(f"Binary eval (threshold 0.5) on {EVAL_SAMPLES} class-0/class-1 samples")
-    print(f"Overall accuracy: {acc:.4f}")
+    above_thresh = int((prob_cls1_sorted > 0.05).sum())
+    print(
+        f"Predicted class 0 samples with P(class 1 | {{class 0, class 1}}) > 0.05: "
+        f"{above_thresh} / {n_total}"
+    )
 
 
 if __name__ == "__main__":
