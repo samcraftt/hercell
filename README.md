@@ -62,7 +62,44 @@ python eval_specks.py
 python run_hovernet.py
 ```
 
-## Jack H's code...
+## Jack H's code
+## Runnable scripts/commands
+
+### Patch-level baseline
+
+```bash
+cd jackh/first_presentation_models/initial_model\(patch\)
+
+python train_convnext\ copy.py
+python plot_conf.py
+```
+
+### WSI-style baseline
+
+```bash
+cd jackh/first_presentation_models/initial_model\(wsi\)
+
+python predict_wsi_from_patches.py
+python plot_wsi_conf.py
+```
+
+### DAB / brown heatmap
+
+```bash
+cd jackh/first_presentation_models/good_heatmap_brown
+
+python dab_heatmap.py
+```
+
+### Final DAB-regularized heatmap model
+
+```bash
+cd jackh/final_report_models/dab_better
+
+python dabv2.regularization.py
+python visualizsev2_dab.py
+```
+
 
 # Contributions
 
