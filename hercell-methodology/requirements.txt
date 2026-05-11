@@ -2,3 +2,10 @@ torch
 torchvision
 matplotlib
 tiatoolbox
+pandas
+scikit-learn
+pillow
+matplotlib
+tqdm
+scikit-image
+scipy
