@@ -14,7 +14,7 @@ npm i
 npm start
 ```
 
-Upload images found in `hercell/hercell-app/images` to test functionality.
+Upload images found in `hercell-app/images` to test functionality.
 
 # Explore the methodology
 
